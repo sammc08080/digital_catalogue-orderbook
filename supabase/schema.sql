@@ -59,6 +59,18 @@ alter table cob_businesses add column if not exists size_groups jsonb;
 
 alter table cob_businesses add column if not exists gst_slabs jsonb not null default '[{"upto":2500,"pct":5},{"upto":null,"pct":18}]'::jsonb;
 
+-- Update 6 (Admins / companies, GST number)
+create table if not exists cob_admins (
+  id uuid primary key default gen_random_uuid(),
+  company_name text not null,
+  password_hash text not null,
+  created_at timestamptz not null default now()
+);
+create unique index if not exists cob_admins_company_name_idx on cob_admins (lower(company_name));
+alter table cob_admins enable row level security;
+alter table cob_businesses add column if not exists admin_id uuid references cob_admins(id) on delete set null;
+alter table cob_businesses add column if not exists gst_number text;
+
 create index if not exists cob_categories_business_idx on cob_categories(business_id);
 create index if not exists cob_products_business_idx on cob_products(business_id);
 

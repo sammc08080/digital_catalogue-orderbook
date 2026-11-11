@@ -310,6 +310,7 @@ export default function ManagePage() {
   const [state, setState] = useState('loading'); // loading | login | ready | missing
   const [biz, setBiz] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [role, setRole] = useState(null); // master | admin | pin
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [tab, setTab] = useState('products');
@@ -323,6 +324,8 @@ export default function ManagePage() {
       const d = await api('/api/business', { action: 'me', slug });
       setBiz(d.business);
       setIsAdmin(!!d.isAdmin);
+      setRole(d.role);
+      if (!d.isAdmin) setTab('products');
       setCategories(d.categories);
       setProducts(d.products);
       setState('ready');
@@ -403,8 +406,9 @@ export default function ManagePage() {
           <h2 style={{ marginTop: 10 }}>{biz ? biz.name : 'Catalogue settings'}</h2>
           <div className="muted" style={{ marginBottom: 12 }}>Catalogue settings</div>
           {error && <div className="error">{error}</div>}
-          <label className="field" style={{ textAlign: 'left' }}>Company admin password
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />
+          <label className="field" style={{ textAlign: 'left' }}>Catalogue settings PIN (4 digits)
+            <input type="password" inputMode="numeric" maxLength={4} value={password}
+              onChange={(e) => setPassword(e.target.value.replace(/\D/g, '').slice(0, 4))} autoFocus />
           </label>
           <button className="btn full" disabled={busy}>{busy ? 'Please wait…' : 'Log in'}</button>
         </form>
@@ -424,20 +428,25 @@ export default function ManagePage() {
             <a className="muted" href={`/b/${biz.slug}`} target="_blank" rel="noreferrer">View catalogue ↗</a>
           </div>
         </div>
-        {isAdmin ? <a className="btn small blue" href="/admin">Admin</a>
-          : <button className="btn small blue" onClick={logout}>Log out</button>}
+        {role === 'master' ? <a className="btn small blue" href="/admin">Master admin</a>
+          : role === 'admin' ? <a className="btn small blue" href="/company">Admin</a>
+            : <button className="btn small blue" onClick={logout}>Log out</button>}
       </div>
 
       <div className="tabs">
         <button className={'tab' + (tab === 'products' ? ' active' : '')} onClick={() => setTab('products')}>Products ({products.length})</button>
-        <button className={'tab' + (tab === 'categories' ? ' active' : '')} onClick={() => setTab('categories')}>Categories ({categories.length})</button>
-        <button className={'tab' + (tab === 'sizes' ? ' active' : '')} onClick={() => setTab('sizes')}>Sizes</button>
-        <button className={'tab' + (tab === 'gst' ? ' active' : '')} onClick={() => setTab('gst')}>GST slabs</button>
+        {isAdmin && (
+          <>
+            <button className={'tab' + (tab === 'categories' ? ' active' : '')} onClick={() => setTab('categories')}>Categories ({categories.length})</button>
+            <button className={'tab' + (tab === 'sizes' ? ' active' : '')} onClick={() => setTab('sizes')}>Sizes</button>
+            <button className={'tab' + (tab === 'gst' ? ' active' : '')} onClick={() => setTab('gst')}>GST slabs</button>
+          </>
+        )}
       </div>
 
       {error && <div className="error">{error}</div>}
 
-      {tab === 'products' ? (
+      {tab === 'products' || !isAdmin ? (
         <ProductsTab categories={categories} products={products} call={call} onEdit={openEdit} onAdd={() => setEditing(blankProduct())} />
       ) : tab === 'categories' ? (
         <CategoriesTab categories={categories} products={products} call={call} />

@@ -3,13 +3,13 @@
 import { compressImage } from '../lib/client';
 
 export const BRAND_EMPTY = {
-  name: '', contact_person: '', contact_number: '', address: '',
+  name: '', contact_person: '', contact_number: '', address: '', gst_number: '',
   whatsapp: '', instagram: '', facebook: '', youtube: '',
-  about_brand: '', about_company: '', password: '',
+  about_brand: '', about_company: '', password: '', admin_id: '',
 };
 
 // The Brand Page fields, used by "Register a brand" and "Brand page"
-export default function BrandFields({ form, setForm, logo, setLogo, logoUrl, setError, editing }) {
+export default function BrandFields({ form, setForm, logo, setLogo, logoUrl, setError, editing, admins }) {
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const src = logo || logoUrl;
 
@@ -45,6 +45,9 @@ export default function BrandFields({ form, setForm, logo, setLogo, logoUrl, set
       <label className="field">Brand address
         <textarea value={form.address} onChange={set('address')} />
       </label>
+      <label className="field">Company GST number
+        <input type="text" value={form.gst_number} onChange={set('gst_number')} style={{ textTransform: 'uppercase' }} />
+      </label>
 
       <div className="section-title" style={{ marginTop: 6 }}>Social media (only filled ones show)</div>
       <label className="field">WhatsApp number or link
@@ -68,9 +71,19 @@ export default function BrandFields({ form, setForm, logo, setLogo, logoUrl, set
       </label>
 
       <label className="field">
-        {editing ? 'New company admin password (leave blank to keep)' : <>Company admin password <span className="req">*</span></>}
-        <input type="text" value={form.password} onChange={set('password')} placeholder="At least 4 characters" />
+        {editing ? 'New catalogue settings PIN (4 digits, leave blank to keep)' : <>Catalogue settings PIN (4 digits) <span className="req">*</span></>}
+        <input type="text" inputMode="numeric" maxLength={4} value={form.password}
+          onChange={(e) => setForm({ ...form, password: e.target.value.replace(/\D/g, '').slice(0, 4) })} placeholder="e.g. 4821" />
       </label>
+
+      {Array.isArray(admins) && (
+        <label className="field">Company (Admin)
+          <select value={form.admin_id || ''} onChange={set('admin_id')}>
+            <option value="">— Master admin only —</option>
+            {admins.map((a) => <option key={a.id} value={a.id}>{a.company_name}</option>)}
+          </select>
+        </label>
+      )}
     </>
   );
 }

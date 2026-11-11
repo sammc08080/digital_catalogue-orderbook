@@ -10,7 +10,7 @@ import SearchBar, { matchArt } from '../../../components/SearchBar';
 import { slabLines } from '../../../lib/gst';
 import { whatsappLink } from '../../../lib/social';
 
-const EMPTY_CUSTOMER = { name: '', address: '', phone: '', note: '' };
+const EMPTY_CUSTOMER = { name: '', contact_person: '', phone: '', gst: '', address: '', note: '' };
 
 export default function MainCatalogue() {
   const { slug } = useParams();
@@ -64,7 +64,7 @@ export default function MainCatalogue() {
   async function sendOrder() {
     setOrderError('');
     if (!customer.name.trim() || !customer.phone.trim()) {
-      setCustError('Please fill in customer name and contact number.');
+      setCustError('Please fill in store name and contact number.');
       setOrderError('Fill in the customer details first.');
       if (custRef.current) custRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
@@ -128,19 +128,25 @@ export default function MainCatalogue() {
       <BrandHeader b={b} />
 
       <div className="card" ref={custRef}>
-        <h3>Customer details</h3>
+        <h3>Buyer details</h3>
         {custError && <div className="error">{custError}</div>}
-        <label className="field">Customer name <span className="req">*</span>
+        <label className="field">Store name <span className="req">*</span>
           <input type="text" value={customer.name} onChange={setC('name')} />
         </label>
-        <label className="field">Customer address (optional)
-          <textarea value={customer.address} onChange={setC('address')} />
+        <label className="field">Contact person
+          <input type="text" value={customer.contact_person} onChange={setC('contact_person')} />
         </label>
         <label className="field">Contact number <span className="req">*</span>
           <input type="tel" value={customer.phone} onChange={setC('phone')} />
         </label>
+        <label className="field">GST number
+          <input type="text" value={customer.gst} onChange={setC('gst')} style={{ textTransform: 'uppercase' }} />
+        </label>
+        <label className="field">Address
+          <textarea value={customer.address} onChange={setC('address')} />
+        </label>
         <label className="field" style={{ marginBottom: 0 }}>Note
-          <textarea value={customer.note} onChange={setC('note')} placeholder="GST number, transport / courier, etc." />
+          <textarea value={customer.note} onChange={setC('note')} placeholder="Transport / courier, delivery details, etc." />
         </label>
       </div>
 
@@ -165,12 +171,7 @@ export default function MainCatalogue() {
       )}
 
       <div className="card report-card" style={{ marginTop: 18 }}>
-        <h2>Order summary</h2>
-        {liveReport && liveReport.rows.length > 0 ? (
-          <OrderReport customer={customer} report={liveReport} />
-        ) : (
-          <p className="muted" style={{ margin: 0 }}>Tick a product image, then choose colour and size. Your order will appear here.</p>
-        )}
+        <OrderReport customer={customer} brand={b} report={liveReport || { rows: [], totalQty: 0, taxable: 0, totalGst: 0, grandTotal: 0, allPriced: true }} />
       </div>
 
       <div className="slab-note">

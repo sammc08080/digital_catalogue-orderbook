@@ -8,19 +8,52 @@ function Swatch({ c }) {
 const rs = (n) => '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/\.00$/, '');
 const rs0 = (n) => '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
+export function orderDateTime(d = new Date()) {
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' +
+    d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ORDER FORM heading: title, date & time, logo, buyer (left) and company (right)
+export function OrderFormHead({ customer, brand }) {
+  const buyer = [
+    ['Buyer', customer.name], ['Contact person', customer.contact_person], ['Contact number', customer.phone],
+    ['GST number', customer.gst ? 'GST: ' + customer.gst : ''], ['Address', customer.address],
+  ];
+  const company = [
+    brand.name, brand.contact_person, brand.contact_number,
+    brand.gst_number ? 'GST: ' + brand.gst_number : '', brand.address,
+  ];
+  return (
+    <div className="of-head">
+      <div className="of-title">ORDER FORM</div>
+      <div className="of-date">{orderDateTime()}</div>
+      {brand.logo_url && <img className="logo big of-logo" src={brand.logo_url} alt="" />}
+      <div className="of-cols">
+        <div className="of-left">
+          {buyer.map(([k, v], i) => (
+            <div key={k} className={i === 0 ? 'of-strong' : ''}>
+              {i === 0 ? 'Buyer: ' : ''}{v || (i === 0 ? '-' : <span className="muted">{k}: -</span>)}
+            </div>
+          ))}
+        </div>
+        <div className="of-right">
+          {company.map((v, i) => (v ? <div key={i} className={i === 0 ? 'of-strong' : ''}>{v}</div> : null))}
+        </div>
+      </div>
+      {customer.note && <div className="of-note"><b>Note:</b> {customer.note}</div>}
+    </div>
+  );
+}
+
 // Consolidated report shown at the bottom of the catalogue
-export default function OrderReport({ customer, report }) {
+export default function OrderReport({ customer, brand, report }) {
   return (
     <div>
-      <table className="cust-table">
-        <tbody>
-          <tr><th>Customer name</th><td>{customer.name || '-'}</td></tr>
-          <tr><th>Address</th><td style={{ whiteSpace: 'pre-line' }}>{customer.address || '-'}</td></tr>
-          <tr><th>Contact number</th><td>{customer.phone || '-'}</td></tr>
-          <tr><th>Note</th><td style={{ whiteSpace: 'pre-line' }}>{customer.note || '-'}</td></tr>
-        </tbody>
-      </table>
-
+      <OrderFormHead customer={customer} brand={brand} />
+      {report.rows.length === 0 ? (
+        <p className="muted center" style={{ margin: '10px 0 0' }}>Tick a product image, then choose colour and size. Your order will appear here.</p>
+      ) : (
+      <>
       <div className="report-scroll">
         <table className="report">
           <thead>
@@ -67,6 +100,8 @@ export default function OrderReport({ customer, report }) {
         Rate = WSP per piece, before GST.
         {report.allPriced ? '' : ' * Items without WSP are not included.'}
       </div>
+      </>
+      )}
     </div>
   );
 }

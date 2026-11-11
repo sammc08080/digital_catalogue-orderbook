@@ -1,19 +1,20 @@
 import {
   db, json, fail, isAdmin, isOwner, ownerToken, ownerCookieName, cookieOpts,
   checkPassword, uploadDataUrl, removeByUrl, cleanSizes, cleanSizeGroups,
+  companyFromReq, brandRow, checkPin, hashPassword,
 } from '../../../lib/server';
 import { brandSizes } from '../../../lib/sizes';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const PUBLIC_FIELDS = 'id, slug, name, logo_url, contact_person, contact_number, address, whatsapp, instagram, facebook, youtube, about_brand, about_company, gst_slabs, size_groups';
+const PUBLIC_FIELDS = 'id, slug, name, logo_url, contact_person, contact_number, address, whatsapp, instagram, facebook, youtube, about_brand, about_company, gst_number, gst_slabs, size_groups';
 
 async function loadBusiness(slug) {
   if (!slug) return null;
   const { data, error } = await db()
     .from('cob_businesses')
-    .select(PUBLIC_FIELDS + ', password_hash')
+    .select(PUBLIC_FIELDS + ', password_hash, admin_id')
     .eq('slug', String(slug))
     .maybeSingle();
   if (error) throw error;
@@ -21,7 +22,7 @@ async function loadBusiness(slug) {
 }
 
 function publicBiz(biz) {
-  const { password_hash, ...rest } = biz;
+  const { password_hash, admin_id, ...rest } = biz;
   return rest;
 }
 
@@ -64,7 +65,7 @@ export async function POST(req) {
     if (!biz) return fail('Business not found', 404);
 
     if (action === 'login') {
-      if (!checkPassword(body.password || '', biz.password_hash)) return fail('Wrong password', 401);
+      if (!checkPassword(body.password || '', biz.password_hash)) return fail('Wrong PIN', 401);
       const res = json({ ok: true });
       res.cookies.set(ownerCookieName(biz.slug), ownerToken(biz), cookieOpts);
       return res;
@@ -76,14 +77,55 @@ export async function POST(req) {
       return res;
     }
 
-    const admin = isAdmin(req);
-    if (!admin && !isOwner(req, biz)) {
+    // who is this? master admin > company admin that owns this brand > catalogue PIN
+    const master = isAdmin(req);
+    const company = master ? null : await companyFromReq(req);
+    const role = master ? 'master'
+      : company && biz.admin_id === company.id ? 'admin'
+        : isOwner(req, biz) ? 'pin' : null;
+    if (!role) {
       return fail('Please log in', 401, { business: { name: biz.name, logo_url: biz.logo_url } });
     }
+    const full = role === 'master' || role === 'admin';
 
     if (action === 'me') {
       const cat = await loadCatalogue(biz.id);
-      return json({ business: publicBiz(biz), isAdmin: admin, ...cat });
+      const out = { business: publicBiz(biz), role, isAdmin: full, ...cat };
+      if (master) {
+        out.business.admin_id = biz.admin_id || null;
+        const { data: admins } = await db().from('cob_admins').select('id, company_name').order('company_name');
+        out.admins = admins || [];
+      }
+      return json(out);
+    }
+
+    // the 4-digit PIN only manages products
+    const PIN_ACTIONS = ['saveProduct', 'toggleStock', 'deleteProduct'];
+    if (!full && !PIN_ACTIONS.includes(action)) return fail('Only the admin can change this', 403);
+
+    // ---------- Brand page ----------
+    if (action === 'updateBrand') {
+      const row = brandRow(body);
+      if (!row.name) return fail('Brand title is required');
+      if (typeof body.logo === 'string' && body.logo.startsWith('data:')) {
+        row.logo_url = await uploadDataUrl(body.logo, 'logos');
+      }
+      if (body.password) {
+        checkPin(body.password);
+        row.password_hash = hashPassword(String(body.password));
+      }
+      if (master && 'admin_id' in body) {
+        let adminId = body.admin_id || null;
+        if (adminId) {
+          const { data } = await db().from('cob_admins').select('id').eq('id', adminId).maybeSingle();
+          if (!data) adminId = null;
+        }
+        row.admin_id = adminId;
+      }
+      const { error } = await db().from('cob_businesses').update(row).eq('id', biz.id);
+      if (error) throw error;
+      if (row.logo_url && biz.logo_url) await removeByUrl(biz.logo_url);
+      return json({ ok: true });
     }
 
     // ---------- Categories ----------

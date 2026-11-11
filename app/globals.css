@@ -301,3 +301,14 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--blue); bord
 .size-chip { display: inline-flex; align-items: center; gap: 4px; padding: 5px 6px 5px 10px; border-radius: 8px; border: 1.5px solid var(--brown); background: #fff; font-weight: 700; font-size: 14px; }
 .size-chip button { border: none; background: var(--blush); color: #7a3530; width: 20px; height: 20px; border-radius: 50%; font-weight: 800; font-size: 13px; line-height: 1; cursor: pointer; padding: 0; }
 @media (max-width: 520px) { .tabs { flex-wrap: wrap; } .tab { flex: 1 1 40%; } }
+
+/* ---- ORDER FORM heading ---- */
+.of-head { margin-bottom: 14px; }
+.of-title { text-align: center; font-size: 22px; font-weight: 900; letter-spacing: 0.08em; }
+.of-date { text-align: center; font-size: 13px; color: var(--brown-soft); margin-top: 2px; }
+.of-logo { display: block; margin: 10px auto 12px; }
+.of-cols { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; line-height: 1.45; }
+.of-left { text-align: left; flex: 1; min-width: 0; white-space: pre-line; word-break: break-word; }
+.of-right { text-align: right; flex: 1; min-width: 0; white-space: pre-line; word-break: break-word; }
+.of-strong { font-weight: 800; font-size: 14px; }
+.of-note { font-size: 13px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); white-space: pre-line; }

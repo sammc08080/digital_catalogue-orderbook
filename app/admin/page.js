@@ -2,28 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/client';
-import BrandFields, { BRAND_EMPTY } from '../../components/BrandFields';
-
-
-function Logo({ url, name, big }) {
-  if (url) return <img className={'logo' + (big ? ' big' : '')} src={url} alt="" />;
-  return <span className={'logo logo-ph' + (big ? ' big' : '')}>{(name || '?').charAt(0).toUpperCase()}</span>;
-}
+import BrandsPanel from '../../components/BrandsPanel';
+import AdminsPanel from '../../components/AdminsPanel';
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState(null); // null = checking
   const [password, setPassword] = useState('');
   const [businesses, setBusinesses] = useState([]);
-  const [form, setForm] = useState(BRAND_EMPTY);
-  const [logo, setLogo] = useState(null);
+  const [admins, setAdmins] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [done, setDone] = useState(null);
 
   async function loadList() {
     try {
       const d = await api('/api/admin', { action: 'list' });
       setBusinesses(d.businesses);
+      setAdmins(d.admins || []);
       setAuthed(true);
     } catch (e) {
       if (e.status === 401) setAuthed(false);
@@ -52,36 +46,6 @@ export default function AdminPage() {
     setAuthed(false);
   }
 
-  async function register(e) {
-    e.preventDefault();
-    setError('');
-    setDone(null);
-    setBusy(true);
-    try {
-      const d = await api('/api/admin', { action: 'register', ...form, logo });
-      setDone(d.business);
-      setForm(BRAND_EMPTY);
-      setLogo(null);
-      await loadList();
-    } catch (e2) {
-      setError(e2.message);
-    }
-    setBusy(false);
-  }
-
-  async function remove(b) {
-    if (!window.confirm(`Delete "${b.name}" and its whole catalogue? This cannot be undone.`)) return;
-    setError('');
-    try {
-      await api('/api/admin', { action: 'delete', id: b.id });
-      await loadList();
-    } catch (e2) {
-      setError(e2.message);
-    }
-  }
-
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-
   if (authed === null) return <main className="wrap"><p className="muted center">Loading…</p></main>;
 
   if (!authed) {
@@ -108,37 +72,8 @@ export default function AdminPage() {
 
       {error && <div className="error">{error}</div>}
 
-      <form className="card" onSubmit={register}>
-        <h2>Register a brand</h2>
-        {done && (
-          <div className="ok">
-            “{done.name}” registered. Catalogue link:<br />
-            <a href={`/b/${done.slug}`}>{origin}/b/{done.slug}</a>
-          </div>
-        )}
-        <BrandFields form={form} setForm={setForm} logo={logo} setLogo={setLogo} setError={setError} />
-        <button className="btn full" disabled={busy}>{busy ? 'Saving…' : 'Register brand'}</button>
-      </form>
-
-      <div className="card">
-        <h2>Registered brands ({businesses.length})</h2>
-        {businesses.length === 0 && <p className="muted">No brands yet.</p>}
-        {businesses.map((b) => (
-          <div className="list-item" key={b.id}>
-            <Logo url={b.logo_url} name={b.name} />
-            <div className="grow">
-              <div style={{ fontWeight: 700 }}>{b.name}</div>
-              <div className="muted" style={{ wordBreak: 'break-all' }}>/b/{b.slug}</div>
-              <div className="row" style={{ marginTop: 6 }}>
-                <a className="btn small mint" href={`/b/${b.slug}`} target="_blank" rel="noreferrer">Catalogue</a>
-                <a className="btn small blue" href={`/b/${b.slug}/front`}>Brand page</a>
-                <a className="btn small blue" href={`/b/${b.slug}/manage`}>Catalogue settings</a>
-                <button className="btn small blush" onClick={() => remove(b)}>Delete</button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <AdminsPanel admins={admins} businesses={businesses} reload={loadList} setError={setError} />
+      <BrandsPanel endpoint="/api/admin" businesses={businesses} admins={admins} reload={loadList} setError={setError} />
     </main>
   );
 }

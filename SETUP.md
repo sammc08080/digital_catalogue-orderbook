@@ -26,13 +26,14 @@
 
 ## 4. Test
 1. Open `your-site.vercel.app/admin`, log in with your ADMIN_PASSWORD, and register a brand
-   (including a company admin password).
+   (including a 4-digit catalogue settings PIN).
 2. Tap **Catalogue settings**. Check the Sizes and GST slabs tabs, add your category, then add a product.
 3. Tap **Catalogue** to open the main catalogue. Fill in customer details, tick products, choose
    Report PDF or Full PDF, then press **Send order**.
 
 ## Links
-- Master admin: `/admin`
-- Brand page (master admin only): `/b/brand-name/front`
-- Catalogue settings (company admin): `/b/brand-name/manage`
+- Master admin: `/admin` (password = ADMIN_PASSWORD in Vercel)
+- Admin (company): `/company` (company name + password, created by Master admin)
+- Brand page (Master admin or the brand's Admin): `/b/brand-name/front`
+- Catalogue settings: `/b/brand-name/manage` (4-digit PIN = products only; Admin/Master = everything)
 - Main catalogue to share with customers: `/b/brand-name`

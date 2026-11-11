@@ -55,6 +55,7 @@ export default function BrandHeader({ b }) {
           {b.address && <div className="muted" style={{ marginTop: 4, whiteSpace: 'pre-line' }}>{b.address}</div>}
         </div>
       </div>
+      {b.gst_number && <div className="muted" style={{ marginTop: 10 }}><b>GST:</b> {b.gst_number}</div>}
       {links.length > 0 && (
         <div className="social-row">
           {links.map(([k, url]) => (
