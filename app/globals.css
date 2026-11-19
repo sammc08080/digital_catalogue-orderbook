@@ -312,3 +312,10 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--blue); bord
 .of-right { text-align: right; flex: 1; min-width: 0; white-space: pre-line; word-break: break-word; }
 .of-strong { font-weight: 800; font-size: 14px; }
 .of-note { font-size: 13px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); white-space: pre-line; }
+
+/* ---- Custom sets in product form ---- */
+.custom-row { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.custom-row .slab-name { padding-bottom: 0; width: 46px; }
+.custom-row input { margin-top: 0; padding: 9px 10px; flex: 1; min-width: 0; }
+.custom-row input.price { flex: 0 0 76px; }
+.custom-row .slab-x { margin-bottom: 0; }
