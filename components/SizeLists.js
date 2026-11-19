@@ -38,8 +38,11 @@ export default function SizeLists({ slug, groups, onSaved }) {
     setError('');
     setBusy(true);
     try {
-      const d = await api('/api/business', { action: 'saveSizes', slug, groups: list });
-      setList(d.size_groups.map((g) => ({ name: g.name, sizes: [...g.sizes] })));
+      const clean = list.map((g) => ({ ...g, sizes: g.sizes.map((z) => String(z).trim()).filter(Boolean) }));
+      const d = await api('/api/business', { action: 'saveSizes', slug, groups: clean });
+      const next = d.size_groups.map((g) => ({ name: g.name, sizes: [...g.sizes] }));
+      setList(next);
+      setAdding(next.map(() => ''));
       onSaved(d.size_groups);
       setSaved(true);
     } catch (e2) {

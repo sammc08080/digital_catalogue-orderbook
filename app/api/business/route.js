@@ -182,10 +182,21 @@ export async function POST(req) {
       // sizes: the brand's list, plus any older size already saved on this product
       const allowed = [...brandSizes(biz)];
       for (const z of (existing && Array.isArray(existing.sizes) ? existing.sizes : [])) {
-        if (z && z.size && !allowed.includes(z.size)) allowed.push(z.size);
+        if (z && z.size && !z.custom && !allowed.includes(z.size)) allowed.push(z.size);
       }
       const sizes = cleanSizes(p.sizes, use_wsp, use_mrp, allowed);
-      if (!sizes.length) return fail('Tick at least one size');
+      // Custom sets typed for this product
+      const seen = new Set(sizes.map((z) => z.size.toUpperCase()));
+      for (const c of Array.isArray(p.custom) ? p.custom.slice(0, 50) : []) {
+        const name = String((c && c.size) || '').trim();
+        if (!name) continue;
+        if (name.length > 30) return fail(`"${name}" is too long (max 30 letters)`);
+        if (seen.has(name.toUpperCase())) return fail(`"${name}" is listed twice`);
+        seen.add(name.toUpperCase());
+        const one = cleanSizes([{ size: name, wsp: c.wsp, mrp: c.mrp }], use_wsp, use_mrp, [name])[0];
+        sizes.push({ ...one, custom: true });
+      }
+      if (!sizes.length) return fail('Tick at least one size or fill a Custom set');
 
       // main photo
       let photo_url = existing ? existing.photo_url : null;

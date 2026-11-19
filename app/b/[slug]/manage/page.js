@@ -10,7 +10,7 @@ import SearchBar, { matchArt } from '../../../../components/SearchBar';
 import GstSlabs from '../../../../components/GstSlabs';
 
 function blankProduct() {
-  return { id: null, art_no: '', category_id: '', photo: undefined, photo_url: null, colours: [], use_wsp: true, use_mrp: false, sizes: {}, in_stock: true };
+  return { id: null, art_no: '', category_id: '', photo: undefined, photo_url: null, colours: [], use_wsp: true, use_mrp: false, sizes: {}, custom: [], in_stock: true };
 }
 
 // ---------------- Product form ----------------
@@ -19,7 +19,8 @@ function ProductForm({ initial, categories, sizeGroups, onCancel, onSave }) {
   const groups = (() => {
     const known = new Set(sizeGroups.flatMap((g) => g.sizes));
     const extra = Object.keys(initial.sizes || {}).filter((z) => !known.has(z));
-    return extra.length ? [...sizeGroups, { name: 'Other (no longer in size list)', sizes: extra }] : sizeGroups;
+    const base = sizeGroups.filter((g) => g.sizes.length);
+    return extra.length ? [...base, { name: 'Other (no longer in size list)', sizes: extra }] : base;
   })();
   const SIZES = groups.flatMap((g) => g.sizes);
   const [p, setP] = useState(initial);
@@ -74,12 +75,23 @@ function ProductForm({ initial, categories, sizeGroups, onCancel, onSave }) {
 
   const bad = (v) => v === '' || v == null || isNaN(Number(v));
 
+  // Custom sets typed for this product: Set 1, Set 2 ...
+  const custom = p.custom || [];
+  const setCustom = (j, key, v) => setP({ ...p, custom: custom.map((c, m) => (m === j ? { ...c, [key]: v } : c)) });
+  const addCustom = () => setP({ ...p, custom: [...custom, { size: '', wsp: '', mrp: '' }] });
+  const removeCustom = (j) => setP({ ...p, custom: custom.filter((_, m) => m !== j) });
+
   async function save(e) {
     e.preventDefault();
     setError('');
     if (!p.art_no.trim()) return setError('Enter the Name / Art Number');
     const ticked = SIZES.filter((s) => p.sizes[s] !== undefined);
-    if (!ticked.length) return setError('Tick at least one size');
+    const sets = (p.custom || []).map((c) => ({ ...c, size: String(c.size || '').trim() })).filter((c) => c.size);
+    if (!ticked.length && !sets.length) return setError('Tick at least one size or fill a Custom set');
+    for (const c of sets) {
+      if (p.use_wsp && bad(c.wsp)) return setError(`Enter the WSP for ${c.size}`);
+      if (p.use_mrp && bad(c.mrp)) return setError(`Enter the MRP for ${c.size}`);
+    }
     for (const s of ticked) {
       if (p.use_wsp && bad(p.sizes[s].wsp)) return setError(`Enter the WSP for size ${s}`);
       if (p.use_mrp && bad(p.sizes[s].mrp)) return setError(`Enter the MRP for size ${s}`);
@@ -98,6 +110,11 @@ function ProductForm({ initial, categories, sizeGroups, onCancel, onSave }) {
           size: s,
           wsp: p.use_wsp ? Number(p.sizes[s].wsp) : null,
           mrp: p.use_mrp ? Number(p.sizes[s].mrp) : null,
+        })),
+        custom: sets.map((c) => ({
+          size: c.size,
+          wsp: p.use_wsp ? Number(c.wsp) : null,
+          mrp: p.use_mrp ? Number(c.mrp) : null,
         })),
         in_stock: p.in_stock,
       });
@@ -187,6 +204,25 @@ function ProductForm({ initial, categories, sizeGroups, onCancel, onSave }) {
             </div>
           </div>
         ))}
+
+        <div className="size-group-title">Custom</div>
+        {custom.map((c, j) => (
+          <div className="custom-row" key={j}>
+            <span className="slab-name">Set {j + 1}</span>
+            <input type="text" value={c.size} placeholder="Type custom size / set" maxLength={30}
+              onChange={(e) => setCustom(j, 'size', e.target.value)} />
+            {p.use_wsp && (
+              <input type="number" inputMode="decimal" min="0" step="0.01" placeholder="WSP ₹" className="price"
+                value={c.wsp} onChange={(e) => setCustom(j, 'wsp', e.target.value)} />
+            )}
+            {p.use_mrp && (
+              <input type="number" inputMode="decimal" min="0" step="0.01" placeholder="MRP ₹" className="price"
+                value={c.mrp} onChange={(e) => setCustom(j, 'mrp', e.target.value)} />
+            )}
+            <button type="button" className="slab-x" onClick={() => removeCustom(j)} aria-label={`Remove set ${j + 1}`}>×</button>
+          </div>
+        ))}
+        <button type="button" className="btn mint full" onClick={addCustom} style={{ margin: '6px 0 14px' }}>+ Add more</button>
 
         <div style={{ marginBottom: 16 }}>
           <label className="switch">
@@ -361,17 +397,20 @@ export default function ManagePage() {
 
   function openEdit(p) {
     const sizes = {};
+    const custom = [];
     (p.sizes || []).forEach((s) => {
       const w = sizeWsp(s, p);
       const m = sizeMrp(s, p);
-      sizes[s.size] = { wsp: w == null ? '' : String(w), mrp: m == null ? '' : String(m) };
+      const v = { wsp: w == null ? '' : String(w), mrp: m == null ? '' : String(m) };
+      if (s.custom) custom.push({ size: s.size, ...v });
+      else sizes[s.size] = v;
     });
     const hasW = (p.sizes || []).some((s) => sizeWsp(s, p) != null);
     const hasM = (p.sizes || []).some((s) => sizeMrp(s, p) != null);
     setEditing({
       id: p.id, art_no: p.art_no, category_id: p.category_id || '', photo: undefined,
       photo_url: p.photo_url, colours: Array.isArray(p.colours) ? p.colours : [],
-      use_wsp: hasW || !hasM, use_mrp: hasM, sizes, in_stock: p.in_stock,
+      use_wsp: hasW || !hasM, use_mrp: hasM, sizes, custom, in_stock: p.in_stock,
     });
   }
 
