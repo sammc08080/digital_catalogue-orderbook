@@ -36,6 +36,33 @@ export default function SizeLists({ slug, groups, customSets, products, onSaved 
     change(SIZE_GROUPS.map((g) => ({ name: g.name, sizes: [...g.sizes] })));
   }
 
+  // Save, then reset the Custom sets of ALL products (old and new) to the defaults
+  async function applyAll() {
+    setError('');
+    const problem = checkSets(sv, false);
+    if (problem) return setError(problem);
+    const n = (products || []).length;
+    if (!window.confirm(`Reset the Custom sets of all ${n} product(s) to these defaults (names, Pcs, rates)? Products in a category with its own Default sets get that category's sets. Normal sizes are not touched.`)) return;
+    setBusy(true);
+    try {
+      const clean = list.map((g) => ({ ...g, sizes: g.sizes.map((z) => String(z).trim()).filter(Boolean) }));
+      const custom = setsToSave(sv);
+      const d1 = await api('/api/business', {
+        action: 'saveSizes', slug,
+        groups: [...clean, { name: CUSTOM, sizes: custom.map((x) => x.size), sets: custom }],
+        changes: [],
+      });
+      const d2 = await api('/api/business', { action: 'applyDefaults', slug, scope: 'album' });
+      const cg = d1.size_groups.find((g) => g.name === CUSTOM);
+      setSv(setsFrom(cg ? (cg.sets || []) : []));
+      onSaved(d1.size_groups, d2.products);
+      setSaved(`Saved and applied to ${d2.updated || 0} product(s).`);
+    } catch (e2) {
+      setError(e2.message);
+    }
+    setBusy(false);
+  }
+
   async function save(e) {
     e.preventDefault();
     setError('');
@@ -113,6 +140,7 @@ export default function SizeLists({ slug, groups, customSets, products, onSaved 
       </div>
 
       <button className="btn full" disabled={busy} style={{ marginBottom: 10 }}>{busy ? 'Saving…' : 'Save sizes'}</button>
+      <button type="button" className="btn full mint" disabled={busy} onClick={applyAll} style={{ marginBottom: 10 }}>Apply to all products</button>
       <button type="button" className="btn full blue" onClick={reset}>Reset to default sizes</button>
     </form>
   );

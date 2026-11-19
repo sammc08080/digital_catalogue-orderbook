@@ -12,6 +12,28 @@ export default function CategorySets({ slug, category, products, onSaved, onClos
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
 
+  // Save, then reset the Custom sets of ALL products in this category to these defaults
+  async function applyAll() {
+    setError('');
+    setMsg('');
+    const problem = checkSets(sv, false);
+    if (problem) return setError(problem);
+    const n = products.filter((p) => p.category_id === category.id).length;
+    if (!window.confirm(`Reset the Custom sets of all ${n} product(s) in "${category.name}" to these defaults (names, Pcs, rates)? Normal sizes are not touched.`)) return;
+    setBusy(true);
+    try {
+      await api('/api/business', { action: 'saveCategorySets', slug, id: category.id, sets: setsToSave(sv), changes: [] });
+      const d = await api('/api/business', { action: 'applyDefaults', slug, scope: 'category', id: category.id });
+      const saved = (d.categories || []).find((c) => c.id === category.id);
+      setSv(setsFrom(saved ? saved.default_sets : []));
+      onSaved(d);
+      setMsg(`Saved and applied to ${d.updated || 0} product(s).`);
+    } catch (e) {
+      setError(e.message);
+    }
+    setBusy(false);
+  }
+
   async function save() {
     setError('');
     setMsg('');
@@ -54,6 +76,7 @@ export default function CategorySets({ slug, category, products, onSaved, onClos
         <button type="button" className="btn" style={{ flex: 1 }} onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
         <button type="button" className="btn blue" style={{ flex: 1 }} onClick={onClose} disabled={busy}>Close</button>
       </div>
+      <button type="button" className="btn mint full" onClick={applyAll} disabled={busy} style={{ marginTop: 8 }}>Apply to all products in this category</button>
     </div>
   );
 }

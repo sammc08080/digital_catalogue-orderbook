@@ -1,1 +1,1 @@
-Version 11 (Base rate with +/- per set)
+Version 12 (Apply defaults to all products)

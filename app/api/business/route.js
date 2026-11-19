@@ -272,6 +272,43 @@ export async function POST(req) {
       return json({ gst_slabs: clean });
     }
 
+    // ---------- Reset Custom sets of saved products to the defaults ----------
+    // scope 'album': every product (its category's defaults if it has some, else the album defaults)
+    // scope 'category': every product in that category (category defaults, else album defaults)
+    if (action === 'applyDefaults') {
+      const { data: full } = await db().from('cob_businesses').select('size_groups').eq('id', biz.id).maybeSingle();
+      const groups = full && Array.isArray(full.size_groups) ? full.size_groups : [];
+      const cg = groups.find((g) => g.name === 'Custom');
+      const albumSets = cg && Array.isArray(cg.sets) ? cg.sets : [];
+      const { data: cats, error: ce } = await db().from('cob_categories').select('id, default_sets').eq('business_id', biz.id);
+      if (ce) throw ce;
+      const catSets = {};
+      for (const c of cats || []) catSets[c.id] = Array.isArray(c.default_sets) ? c.default_sets : [];
+
+      let q = db().from('cob_products').select('id, category_id, sizes, use_mrp').eq('business_id', biz.id);
+      if (body.scope === 'category') q = q.eq('category_id', body.id);
+      const { data: prods, error: pe } = await q;
+      if (pe) throw pe;
+      let updated = 0;
+      for (const pr of prods || []) {
+        const defs = (pr.category_id && catSets[pr.category_id] && catSets[pr.category_id].length) ? catSets[pr.category_id] : albumSets;
+        if (!defs.length) continue;
+        const normal = (Array.isArray(pr.sizes) ? pr.sizes : []).filter((z) => !z.custom);
+        const taken = new Set(normal.map((z) => String(z.size).toUpperCase()));
+        const custom = defs
+          .filter((d) => d && d.size && !taken.has(String(d.size).toUpperCase()))
+          .map((d) => ({
+            size: d.size, pcs: d.pcs || 1, wsp: d.wsp ?? null, mrp: d.mrp ?? null,
+            off: d.off ?? null, base: d.base ?? null, custom: true,
+          }));
+        const use_mrp = !!pr.use_mrp || custom.some((x) => x.mrp != null);
+        const { error: ue } = await db().from('cob_products').update({ sizes: [...normal, ...custom], use_mrp }).eq('id', pr.id);
+        if (ue) throw ue;
+        updated += 1;
+      }
+      return json({ updated, ...(await loadCatalogue(biz.id)) });
+    }
+
     // ---------- Default sets per category ----------
     if (action === 'saveCategorySets') {
       const { data: c } = await db().from('cob_categories').select('id')
