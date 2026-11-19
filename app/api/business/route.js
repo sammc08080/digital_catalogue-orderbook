@@ -295,12 +295,18 @@ export async function POST(req) {
         if (!defs.length) continue;
         const normal = (Array.isArray(pr.sizes) ? pr.sizes : []).filter((z) => !z.custom);
         const taken = new Set(normal.map((z) => String(z.size).toUpperCase()));
+        // a product keeps its own Base when the default ± pattern has no Base
+        const own = (Array.isArray(pr.sizes) ? pr.sizes : []).find((z) => z.custom && z.base != null);
+        const ownBase = own ? Number(own.base) : null;
         const custom = defs
           .filter((d) => d && d.size && !taken.has(String(d.size).toUpperCase()))
-          .map((d) => ({
-            size: d.size, pcs: d.pcs || 1, wsp: d.wsp ?? null, mrp: d.mrp ?? null,
-            off: d.off ?? null, base: d.base ?? null, custom: true,
-          }));
+          .map((d) => {
+            const rel = !!d.rel || d.base != null;
+            const base = d.base != null ? Number(d.base) : (rel ? ownBase : null);
+            const off = d.off != null ? Number(d.off) : 0;
+            const wsp = rel ? (base != null ? Math.round((base + off) * 100) / 100 : null) : (d.wsp ?? null);
+            return { size: d.size, pcs: d.pcs || 1, wsp, mrp: d.mrp ?? null, off: rel ? off : null, base: rel ? base : null, rel, custom: true };
+          });
         const use_mrp = !!pr.use_mrp || custom.some((x) => x.mrp != null);
         const { error: ue } = await db().from('cob_products').update({ sizes: [...normal, ...custom], use_mrp }).eq('id', pr.id);
         if (ue) throw ue;

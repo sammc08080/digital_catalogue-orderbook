@@ -136,7 +136,7 @@ export default function SizeLists({ slug, groups, customSets, products, onSaved 
       <div style={{ marginBottom: 16 }}>
         <div className="section-title" style={{ marginTop: 6 }}>Custom ({sv.rows.filter((x) => String(x.size).trim()).length})</div>
         <p className="muted" style={{ margin: '0 0 6px' }}>Default sets and rates for this catalogue. Every new product starts with these (you can still change them per product).</p>
-        <SetEditor value={sv} onChange={(v) => { setSaved(false); setSv(v); }} />
+        <SetEditor value={sv} onChange={(v) => { setSaved(false); setSv(v); }} baseHint />
       </div>
 
       <button className="btn full" disabled={busy} style={{ marginBottom: 10 }}>{busy ? 'Saving…' : 'Save sizes'}</button>

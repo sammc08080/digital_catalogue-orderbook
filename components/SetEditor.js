@@ -3,7 +3,7 @@
 import { emptyRow, rowWsp } from '../lib/sets';
 
 // Custom sets editor: optional Base WSP with ± ₹ per set, Pcs, WSP, MRP, × and + Add more
-export default function SetEditor({ value, onChange, showWsp = true, showMrp = true }) {
+export default function SetEditor({ value, onChange, showWsp = true, showMrp = true, baseHint = false }) {
   const v = value;
   const setRow = (j, key, val) => onChange({ ...v, rows: v.rows.map((r, m) => (m === j ? { ...r, [key]: val } : r)) });
   const add = () => onChange({ ...v, rows: [...v.rows, emptyRow()] });
@@ -21,12 +21,17 @@ export default function SetEditor({ value, onChange, showWsp = true, showMrp = t
           {v.useBase && (
             <label className="base-field">Base WSP ₹
               <input type="number" inputMode="decimal" min="0" step="0.01" value={v.base} data-noenter="1" onKeyDown={stop}
-                onChange={(e) => onChange({ ...v, base: e.target.value })} />
+                placeholder={baseHint ? 'per product' : ''} onChange={(e) => onChange({ ...v, base: e.target.value })} />
             </label>
           )}
         </div>
       )}
 
+      {baseHint && v.useBase && (
+        <p className="muted" style={{ margin: '0 0 6px', fontSize: 12 }}>
+          Leave Base empty to type it on each product; the ± pattern will still apply.
+        </p>
+      )}
       {v.rows.map((r, j) => {
         const w = rowWsp(v, r);
         return (
@@ -40,7 +45,9 @@ export default function SetEditor({ value, onChange, showWsp = true, showMrp = t
               <>
                 <input type="number" inputMode="decimal" step="0.01" className="price" placeholder="± ₹" title="Plus / minus from base (e.g. -30 or 60)"
                   data-noenter="1" onKeyDown={stop} value={r.off} onChange={(e) => setRow(j, 'off', e.target.value)} />
-                <span className="calc-wsp">= {w == null ? '–' : '₹' + w.toLocaleString('en-IN')}</span>
+                <span className="calc-wsp">= {w == null
+                  ? `Base ${Number(r.off) < 0 ? '−' : '+'} ${Math.abs(Number(r.off) || 0)}`
+                  : '₹' + w.toLocaleString('en-IN')}</span>
               </>
             ) : (
               <input type="number" inputMode="decimal" min="0" step="0.01" className="price" placeholder="WSP ₹"

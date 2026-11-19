@@ -71,7 +71,7 @@ export default function CategorySets({ slug, category, products, onSaved, onClos
       </p>
       {error && <div className="error">{error}</div>}
       {msg && <div className="ok" style={{ wordBreak: 'normal' }}>{msg}</div>}
-      <SetEditor value={sv} onChange={(v) => { setMsg(''); setSv(v); }} />
+      <SetEditor value={sv} onChange={(v) => { setMsg(''); setSv(v); }} baseHint />
       <div className="row">
         <button type="button" className="btn" style={{ flex: 1 }} onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
         <button type="button" className="btn blue" style={{ flex: 1 }} onClick={onClose} disabled={busy}>Close</button>

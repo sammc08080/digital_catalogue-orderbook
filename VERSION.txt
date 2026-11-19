@@ -1,1 +1,1 @@
-Version 12 (Apply defaults to all products)
+Version 13 (Master +/- formula, base per product)
