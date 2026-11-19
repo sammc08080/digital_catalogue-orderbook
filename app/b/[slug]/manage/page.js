@@ -11,6 +11,7 @@ import GstSlabs from '../../../../components/GstSlabs';
 import CategorySets from '../../../../components/CategorySets';
 import SetEditor from '../../../../components/SetEditor';
 import { setsFrom, setsToSave, checkSets } from '../../../../lib/sets';
+import { cmykToHex, cmykLabel, hexToCmyk } from '../../../../lib/cmyk';
 
 function blankProduct(defaultSets) {
   const sv = setsFrom(defaultSets);
@@ -30,7 +31,8 @@ function ProductForm({ initial, categories, sizeGroups, albumSets, onCancel, onS
   })();
   const SIZES = groups.flatMap((g) => g.sizes);
   const [p, setP] = useState(initial);
-  const [swatch, setSwatch] = useState('#5b4636');
+  const [cmyk, setCmyk] = useState({ c: '0', m: '0', y: '0', k: '0' });
+  const swatch = cmykToHex(cmyk.c, cmyk.m, cmyk.y, cmyk.k);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -61,8 +63,10 @@ function ProductForm({ initial, categories, sizeGroups, albumSets, onCancel, onS
   }
 
   function addSwatch() {
-    setP({ ...p, colours: [...p.colours, { type: 'swatch', value: swatch }] });
+    const label = cmykLabel(cmyk.c, cmyk.m, cmyk.y, cmyk.k);
+    setP({ ...p, colours: [...p.colours, { type: 'swatch', value: swatch, cmyk: label }] });
   }
+  const setC = (k) => (e) => setCmyk({ ...cmyk, [k]: e.target.value.replace(/[^0-9]/g, '').slice(0, 3) });
 
   function removeColour(i) {
     setP({ ...p, colours: p.colours.filter((_, j) => j !== i) });
@@ -165,9 +169,14 @@ function ProductForm({ initial, categories, sizeGroups, albumSets, onCancel, onS
         <div className="colour-edit">
           {p.colours.length === 0 && <span className="muted">No colours added</span>}
           {p.colours.map((c, i) => (
-            <div className="item" key={i}>
+            <div className="colour-name-row" key={i}>
               <ColourBox c={c} />
-              <button type="button" className="x" onClick={() => removeColour(i)} aria-label="Remove colour">×</button>
+              <span className="colour-name-wrap">
+                <input type="text" value={c.name || ''} maxLength={30} placeholder="Colour name (e.g. Navy Blue)"
+                  onChange={(e) => setP({ ...p, colours: p.colours.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} />
+                {c.cmyk && <span className="muted cmyk-code">{c.cmyk}</span>}
+              </span>
+              <button type="button" className="slab-x" onClick={() => removeColour(i)} aria-label="Remove colour">×</button>
             </div>
           ))}
         </div>
@@ -175,8 +184,15 @@ function ProductForm({ initial, categories, sizeGroups, albumSets, onCancel, onS
           <span className="btn small mint file-btn">+ Colour photo
             <input type="file" accept="image/*" onChange={addColourPhoto} />
           </span>
-          <span className="swatch-pick">
-            <input type="color" value={swatch} onChange={(e) => setSwatch(e.target.value)} />
+          <span className="cmyk-pick">
+            {['c', 'm', 'y', 'k'].map((k) => (
+              <label key={k}>{k.toUpperCase()}
+                <input type="number" inputMode="numeric" min="0" max="100" value={cmyk[k]} onChange={setC(k)} />
+              </label>
+            ))}
+            <label title="Pick a colour">Pick
+              <input type="color" className="cmyk-colour" value={swatch} onChange={(e) => setCmyk(hexToCmyk(e.target.value))} />
+            </label>
             <button type="button" className="btn small mint" onClick={addSwatch}>+ Swatch</button>
           </span>
         </div>

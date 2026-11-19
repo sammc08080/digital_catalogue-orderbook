@@ -1,12 +1,22 @@
 import { rupees } from '../lib/client';
 import { sizeWsp, sizeMrp, sizePcs } from '../lib/sizes';
 
+// colour box with its name underneath (when it has one)
+export function NamedColour({ c, selected, onClick, disabled }) {
+  return (
+    <span className="colour-item">
+      <ColourBox c={c} selected={selected} onClick={onClick} disabled={disabled} />
+      {c.name && <span className="colour-label">{c.name}</span>}
+    </span>
+  );
+}
+
 export function ColourBox({ c, selected, onClick, disabled }) {
   const style = c.type === 'photo'
     ? { backgroundImage: `url("${c.value}")` }
     : { backgroundColor: c.value };
   return (
-    <button type="button" className={'colour-box' + (selected ? ' sel' : '')} style={style}
+    <button type="button" className={'colour-box' + (selected ? ' sel' : '')} style={style} title={c.name || undefined}
       onClick={onClick} disabled={disabled} aria-pressed={!!selected}>
       {selected && <span className="tick">✓</span>}
     </button>
@@ -42,7 +52,7 @@ export default function ProductCard({ p, categories, children }) {
       <div className="body">
         <div className="art">{productTitle(p, categories)}</div>
         {(p.colours || []).length > 0 && (
-          <div className="box-row">{p.colours.map((c, i) => <ColourBox key={i} c={c} disabled />)}</div>
+          <div className="box-row">{p.colours.map((c, i) => <NamedColour key={i} c={c} disabled />)}</div>
         )}
         <div className="box-row">{(p.sizes || []).map((s) => <SizeBox key={s.size} s={s} p={p} disabled />)}</div>
         {!p.in_stock && <div><span className="badge-out">Out of stock</span></div>}

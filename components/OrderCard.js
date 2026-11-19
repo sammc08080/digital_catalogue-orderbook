@@ -1,6 +1,6 @@
 'use client';
 
-import { ColourBox, SizeBox, productTitle } from './ProductCard';
+import { NamedColour, SizeBox, productTitle } from './ProductCard';
 import { lineQty } from '../lib/order';
 
 // Product in the main catalogue: tick the image box first, then colours, sizes and sets
@@ -32,7 +32,7 @@ export default function OrderCard({ p, categories, sel, onChange }) {
               <div className="opt-label">Colour</div>
               <div className="box-row">
                 {colours.map((c, i) => (
-                  <ColourBox key={i} c={c} disabled={!on} selected={on && s.colours.includes(i)} onClick={() => toggle('colours', i)} />
+                  <NamedColour key={i} c={c} disabled={!on} selected={on && s.colours.includes(i)} onClick={() => toggle('colours', i)} />
                 ))}
               </div>
             </>

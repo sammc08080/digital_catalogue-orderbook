@@ -338,3 +338,24 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--blue); bord
 .base-field input { width: 110px; margin-top: 0; padding: 8px 10px; }
 .calc-wsp { font-size: 13px; font-weight: 800; color: var(--mint-dark); white-space: nowrap; min-width: 54px; }
 @media (max-width: 520px) { .custom-row .calc-wsp { order: 3; } }
+
+/* ---- Colour names ---- */
+.colour-name-row { display: flex; align-items: center; gap: 8px; width: 100%; padding: 4px 0; }
+.colour-name-row input { flex: 1; min-width: 0; margin-top: 0; padding: 8px 10px; }
+.colour-edit { flex-direction: column; align-items: stretch; gap: 4px; }
+.colour-item { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; max-width: 64px; }
+.colour-label { font-size: 10px; line-height: 1.15; text-align: center; color: var(--brown-soft); word-break: break-word; }
+.clr-cell { display: inline-flex; align-items: center; gap: 4px; }
+.clr-name { font-size: 11px; white-space: normal; max-width: 70px; }
+
+/* ---- CMYK swatch picker ---- */
+.cmyk-pick { display: inline-flex; align-items: flex-end; gap: 6px; flex-wrap: wrap; }
+.cmyk-pick label { display: flex; flex-direction: column; align-items: center; font-size: 11px; font-weight: 800; color: var(--brown-soft); }
+.cmyk-pick input { width: 52px; margin-top: 2px; padding: 7px 6px; text-align: center; }
+.cmyk-preview { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line); display: inline-block; }
+.colour-name-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.colour-name-wrap input { width: 100%; }
+.cmyk-code { font-size: 11px; margin-top: 2px; }
+.cmyk-pick input { width: 58px; -moz-appearance: textfield; }
+.cmyk-pick input::-webkit-outer-spin-button, .cmyk-pick input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.cmyk-pick input.cmyk-colour { width: 44px; height: 36px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: pointer; }

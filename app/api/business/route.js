@@ -212,11 +212,13 @@ export async function POST(req) {
       const colours = [];
       for (const c of Array.isArray(p.colours) ? p.colours.slice(0, 30) : []) {
         if (!c || !c.value) continue;
+        const name = String(c.name || '').trim().slice(0, 30);
         if (c.type === 'swatch') {
-          if (/^#[0-9a-fA-F]{6}$/.test(c.value)) colours.push({ type: 'swatch', value: c.value.toLowerCase() });
+          const cmyk = /^C\d{1,3} M\d{1,3} Y\d{1,3} K\d{1,3}$/.test(String(c.cmyk || '')) ? c.cmyk : undefined;
+          if (/^#[0-9a-fA-F]{6}$/.test(c.value)) colours.push({ type: 'swatch', value: c.value.toLowerCase(), name, ...(cmyk ? { cmyk } : {}) });
         } else if (c.type === 'photo') {
-          if (String(c.value).startsWith('data:')) colours.push({ type: 'photo', value: await uploadDataUrl(c.value, biz.id) });
-          else if (/^https?:\/\//.test(c.value)) colours.push({ type: 'photo', value: c.value });
+          if (String(c.value).startsWith('data:')) colours.push({ type: 'photo', value: await uploadDataUrl(c.value, biz.id), name });
+          else if (/^https?:\/\//.test(c.value)) colours.push({ type: 'photo', value: c.value, name });
         }
       }
       if (existing && Array.isArray(existing.colours)) {

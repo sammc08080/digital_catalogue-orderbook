@@ -1,1 +1,1 @@
-Version 13 (Master +/- formula, base per product)
+Version 16 (Colour picker + CMYK)

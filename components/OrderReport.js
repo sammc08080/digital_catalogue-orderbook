@@ -2,7 +2,12 @@
 function Swatch({ c }) {
   if (!c) return <span className="muted">-</span>;
   const style = c.type === 'photo' ? { backgroundImage: `url("${c.value}")` } : { backgroundColor: c.value };
-  return <span className="mini-swatch" style={style} />;
+  return (
+    <span className="clr-cell">
+      <span className="mini-swatch" style={style} />
+      {c.name && <span className="clr-name">{c.name}</span>}
+    </span>
+  );
 }
 
 const rs = (n) => '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/\.00$/, '');
