@@ -329,3 +329,12 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--blue); bord
 }
 .cat-sets { width: 100%; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 4px 0 8px; }
 .list-item.wrap { flex-wrap: wrap; }
+.custom-row input.pcs { flex: 0 0 58px; margin-top: 0; padding: 9px 8px; }
+@media (max-width: 520px) { .custom-row input.pcs { order: 3; flex: 0 0 60px; } }
+
+/* ---- Base rate for Custom sets ---- */
+.base-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 4px 0 6px; }
+.base-field { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; }
+.base-field input { width: 110px; margin-top: 0; padding: 8px 10px; }
+.calc-wsp { font-size: 13px; font-weight: 800; color: var(--mint-dark); white-space: nowrap; min-width: 54px; }
+@media (max-width: 520px) { .custom-row .calc-wsp { order: 3; } }

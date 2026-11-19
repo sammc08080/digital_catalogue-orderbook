@@ -1,1 +1,1 @@
-Version 9 (Default sets per category)
+Version 11 (Base rate with +/- per set)

@@ -1,5 +1,5 @@
 import { rupees } from '../lib/client';
-import { sizeWsp, sizeMrp } from '../lib/sizes';
+import { sizeWsp, sizeMrp, sizePcs } from '../lib/sizes';
 
 export function ColourBox({ c, selected, onClick, disabled }) {
   const style = c.type === 'photo'
@@ -21,6 +21,7 @@ export function SizeBox({ s, p, selected, onClick, disabled }) {
       disabled={disabled} aria-pressed={!!selected}>
       {selected && <span className="tick">✓</span>}
       <span className="sz">{s.size}</span>
+      {sizePcs(s) > 1 && <span className="pr">{sizePcs(s)} pcs</span>}
       {w != null && <span className="pr">WSP {rupees(w)}</span>}
       {m != null && <span className="pr">MRP {rupees(m)}</span>}
     </button>

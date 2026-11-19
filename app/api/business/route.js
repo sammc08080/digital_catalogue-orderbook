@@ -1,7 +1,7 @@
 import {
   db, json, fail, isAdmin, isOwner, ownerToken, ownerCookieName, cookieOpts,
   checkPassword, uploadDataUrl, removeByUrl, cleanSizes, cleanSizeGroups,
-  companyFromReq, brandRow, checkPin, hashPassword, cleanSets, applySetChanges,
+  companyFromReq, brandRow, checkPin, hashPassword, cleanSets, applySetChanges, cleanPcs, cleanBase,
 } from '../../../lib/server';
 import { brandSizes } from '../../../lib/sizes';
 
@@ -194,7 +194,7 @@ export async function POST(req) {
         if (seen.has(name.toUpperCase())) return fail(`"${name}" is listed twice`);
         seen.add(name.toUpperCase());
         const one = cleanSizes([{ size: name, wsp: c.wsp, mrp: c.mrp }], use_wsp, use_mrp, [name])[0];
-        sizes.push({ ...one, custom: true });
+        sizes.push({ ...one, custom: true, pcs: cleanPcs(c.pcs, name), ...cleanBase(c) });
       }
       if (!sizes.length) return fail('Tick at least one size or fill a Custom set');
 

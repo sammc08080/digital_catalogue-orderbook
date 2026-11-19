@@ -9,12 +9,14 @@ import ProductCard, { ColourBox } from '../../../../components/ProductCard';
 import SearchBar, { matchArt } from '../../../../components/SearchBar';
 import GstSlabs from '../../../../components/GstSlabs';
 import CategorySets from '../../../../components/CategorySets';
+import SetEditor from '../../../../components/SetEditor';
+import { setsFrom, setsToSave, checkSets } from '../../../../lib/sets';
 
 function blankProduct(defaultSets) {
-  const str = (v) => (v == null ? '' : String(v));
-  const custom = (defaultSets || []).map((x) => ({ size: x.size, wsp: str(x.wsp), mrp: str(x.mrp) }));
-  const useMrp = custom.some((x) => x.mrp !== '');
-  return { id: null, art_no: '', category_id: '', photo: undefined, photo_url: null, colours: [], use_wsp: true, use_mrp: useMrp, sizes: {}, custom, in_stock: true };
+  const sv = setsFrom(defaultSets);
+  sv.rows = sv.rows.map(({ orig, ...r }) => r);
+  const useMrp = sv.rows.some((x) => x.mrp !== '');
+  return { id: null, art_no: '', category_id: '', photo: undefined, photo_url: null, colours: [], use_wsp: true, use_mrp: useMrp, sizes: {}, sv, in_stock: true };
 }
 
 // ---------------- Product form ----------------
@@ -84,32 +86,27 @@ function ProductForm({ initial, categories, sizeGroups, albumSets, onCancel, onS
     if (p.id) return setP({ ...p, category_id });
     const cat = categories.find((c) => c.id === category_id);
     const defs = cat && Array.isArray(cat.default_sets) && cat.default_sets.length ? cat.default_sets : (albumSets || []);
-    const str = (v) => (v == null ? '' : String(v));
-    const custom = defs.map((x) => ({ size: x.size, wsp: str(x.wsp), mrp: str(x.mrp) }));
-    setP({ ...p, category_id, custom, use_mrp: p.use_mrp || custom.some((x) => x.mrp !== '') });
+    const next = setsFrom(defs);
+    next.rows = next.rows.map(({ orig, ...r }) => r);
+    setP({ ...p, category_id, sv: next, use_mrp: p.use_mrp || next.rows.some((x) => x.mrp !== '') });
   }
 
-  // Custom sets typed for this product: Set 1, Set 2 ...
-  const custom = p.custom || [];
-  const setCustom = (j, key, v) => setP({ ...p, custom: custom.map((c, m) => (m === j ? { ...c, [key]: v } : c)) });
-  const addCustom = () => setP({ ...p, custom: [...custom, { size: '', wsp: '', mrp: '' }] });
-  const removeCustom = (j) => setP({ ...p, custom: custom.filter((_, m) => m !== j) });
+
+  const sv = p.sv || setsFrom([]);
 
   async function save(e) {
     e.preventDefault();
     setError('');
     if (!p.art_no.trim()) return setError('Enter the Name / Art Number');
     const ticked = SIZES.filter((s) => p.sizes[s] !== undefined);
-    const sets = (p.custom || []).map((c) => ({ ...c, size: String(c.size || '').trim() })).filter((c) => c.size);
+    const sets = setsToSave(sv);
     if (!ticked.length && !sets.length) return setError('Tick at least one size or fill a Custom set');
-    for (const c of sets) {
-      if (p.use_wsp && bad(c.wsp)) return setError(`Enter the WSP for ${c.size}`);
-      if (p.use_mrp && bad(c.mrp)) return setError(`Enter the MRP for ${c.size}`);
+    const problem = checkSets(sv, p.use_wsp);
+    if (problem) return setError(problem);
+    if (!sv.useBase) {
+      for (const c of sets) if (p.use_wsp && c.wsp == null) return setError(`Enter the WSP for ${c.size}`);
     }
-    for (const s of ticked) {
-      if (p.use_wsp && bad(p.sizes[s].wsp)) return setError(`Enter the WSP for size ${s}`);
-      if (p.use_mrp && bad(p.sizes[s].mrp)) return setError(`Enter the MRP for size ${s}`);
-    }
+    for (const c of sets) if (p.use_mrp && c.mrp == null) return setError(`Enter the MRP for ${c.size}`);
     setBusy(true);
     try {
       await onSave({
@@ -126,9 +123,9 @@ function ProductForm({ initial, categories, sizeGroups, albumSets, onCancel, onS
           mrp: p.use_mrp ? Number(p.sizes[s].mrp) : null,
         })),
         custom: sets.map((c) => ({
-          size: c.size,
-          wsp: p.use_wsp ? Number(c.wsp) : null,
-          mrp: p.use_mrp ? Number(c.mrp) : null,
+          ...c,
+          wsp: p.use_wsp ? c.wsp : null,
+          mrp: p.use_mrp ? c.mrp : null,
         })),
         in_stock: p.in_stock,
       });
@@ -220,23 +217,7 @@ function ProductForm({ initial, categories, sizeGroups, albumSets, onCancel, onS
         ))}
 
         <div className="size-group-title">Custom</div>
-        {custom.map((c, j) => (
-          <div className="custom-row" key={j}>
-            <span className="slab-name">Set {j + 1}</span>
-            <input type="text" value={c.size} placeholder="Type custom size / set" maxLength={30}
-              onChange={(e) => setCustom(j, 'size', e.target.value)} />
-            {p.use_wsp && (
-              <input type="number" inputMode="decimal" min="0" step="0.01" placeholder="WSP ₹" className="price"
-                value={c.wsp} onChange={(e) => setCustom(j, 'wsp', e.target.value)} />
-            )}
-            {p.use_mrp && (
-              <input type="number" inputMode="decimal" min="0" step="0.01" placeholder="MRP ₹" className="price"
-                value={c.mrp} onChange={(e) => setCustom(j, 'mrp', e.target.value)} />
-            )}
-            <button type="button" className="slab-x" onClick={() => removeCustom(j)} aria-label={`Remove set ${j + 1}`}>×</button>
-          </div>
-        ))}
-        <button type="button" className="btn mint full" onClick={addCustom} style={{ margin: '6px 0 14px' }}>+ Add more</button>
+        <SetEditor value={sv} onChange={(v) => setP({ ...p, sv: v })} showWsp={p.use_wsp} showMrp={p.use_mrp} />
 
         <div style={{ marginBottom: 16 }}>
           <label className="switch">
@@ -419,20 +400,21 @@ export default function ManagePage() {
 
   function openEdit(p) {
     const sizes = {};
-    const custom = [];
+    const customList = [];
     (p.sizes || []).forEach((s) => {
       const w = sizeWsp(s, p);
       const m = sizeMrp(s, p);
-      const v = { wsp: w == null ? '' : String(w), mrp: m == null ? '' : String(m) };
-      if (s.custom) custom.push({ size: s.size, ...v });
-      else sizes[s.size] = v;
+      if (s.custom) customList.push({ ...s, wsp: w, mrp: m });
+      else sizes[s.size] = { wsp: w == null ? '' : String(w), mrp: m == null ? '' : String(m) };
     });
+    const sv = setsFrom(customList);
+    sv.rows = sv.rows.map(({ orig, ...r }) => r);
     const hasW = (p.sizes || []).some((s) => sizeWsp(s, p) != null);
     const hasM = (p.sizes || []).some((s) => sizeMrp(s, p) != null);
     setEditing({
       id: p.id, art_no: p.art_no, category_id: p.category_id || '', photo: undefined,
       photo_url: p.photo_url, colours: Array.isArray(p.colours) ? p.colours : [],
-      use_wsp: hasW || !hasM, use_mrp: hasM, sizes, custom, in_stock: p.in_stock,
+      use_wsp: hasW || !hasM, use_mrp: hasM, sizes, sv, in_stock: p.in_stock,
     });
   }
 
