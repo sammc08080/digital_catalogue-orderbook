@@ -1,7 +1,7 @@
 import {
   db, json, fail, isAdmin, isOwner, ownerToken, ownerCookieName, cookieOpts,
   checkPassword, uploadDataUrl, removeByUrl, cleanSizes, cleanSizeGroups,
-  companyFromReq, brandRow, checkPin, hashPassword,
+  companyFromReq, brandRow, checkPin, hashPassword, cleanSets, applySetChanges,
 } from '../../../lib/server';
 import { brandSizes } from '../../../lib/sizes';
 
@@ -28,7 +28,7 @@ function publicBiz(biz) {
 
 async function loadCatalogue(bizId) {
   const [cats, prods] = await Promise.all([
-    db().from('cob_categories').select('id, name, sort').eq('business_id', bizId)
+    db().from('cob_categories').select('id, name, sort, default_sets').eq('business_id', bizId)
       .order('sort', { ascending: true }).order('created_at', { ascending: true }),
     db().from('cob_products').select('id, category_id, art_no, photo_url, colours, price_type, use_wsp, use_mrp, sizes, in_stock, created_at')
       .eq('business_id', bizId).order('created_at', { ascending: false }),
@@ -272,12 +272,27 @@ export async function POST(req) {
       return json({ gst_slabs: clean });
     }
 
+    // ---------- Default sets per category ----------
+    if (action === 'saveCategorySets') {
+      const { data: c } = await db().from('cob_categories').select('id')
+        .eq('id', body.id).eq('business_id', biz.id).maybeSingle();
+      if (!c) return fail('Category not found', 404);
+      const default_sets = cleanSets(body.sets);
+      const { error } = await db().from('cob_categories').update({ default_sets }).eq('id', c.id);
+      if (error) throw error;
+      const updated = await applySetChanges(biz.id, body.changes, c.id);
+      return json({ updated, ...(await loadCatalogue(biz.id)) });
+    }
+
     // ---------- Size lists ----------
     if (action === 'saveSizes') {
       const size_groups = cleanSizeGroups(body.groups);
       const { error } = await db().from('cob_businesses').update({ size_groups }).eq('id', biz.id);
       if (error) throw error;
-      return json({ size_groups });
+
+      const updated = await applySetChanges(biz.id, body.changes);
+      const cat = await loadCatalogue(biz.id);
+      return json({ size_groups, updated, products: cat.products });
     }
 
     if (action === 'toggleStock') {

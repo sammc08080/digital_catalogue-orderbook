@@ -71,6 +71,9 @@ alter table cob_admins enable row level security;
 alter table cob_businesses add column if not exists admin_id uuid references cob_admins(id) on delete set null;
 alter table cob_businesses add column if not exists gst_number text;
 
+-- Update 7 (default Custom sets per category)
+alter table cob_categories add column if not exists default_sets jsonb not null default '[]'::jsonb;
+
 create index if not exists cob_categories_business_idx on cob_categories(business_id);
 create index if not exists cob_products_business_idx on cob_products(business_id);
 

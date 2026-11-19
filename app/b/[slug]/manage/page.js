@@ -3,18 +3,22 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api, compressImage } from '../../../../lib/client';
-import { brandSizeGroups, sizeWsp, sizeMrp } from '../../../../lib/sizes';
+import { brandSizeGroups, brandCustomSets, sizeWsp, sizeMrp } from '../../../../lib/sizes';
 import SizeLists from '../../../../components/SizeLists';
 import ProductCard, { ColourBox } from '../../../../components/ProductCard';
 import SearchBar, { matchArt } from '../../../../components/SearchBar';
 import GstSlabs from '../../../../components/GstSlabs';
+import CategorySets from '../../../../components/CategorySets';
 
-function blankProduct() {
-  return { id: null, art_no: '', category_id: '', photo: undefined, photo_url: null, colours: [], use_wsp: true, use_mrp: false, sizes: {}, custom: [], in_stock: true };
+function blankProduct(defaultSets) {
+  const str = (v) => (v == null ? '' : String(v));
+  const custom = (defaultSets || []).map((x) => ({ size: x.size, wsp: str(x.wsp), mrp: str(x.mrp) }));
+  const useMrp = custom.some((x) => x.mrp !== '');
+  return { id: null, art_no: '', category_id: '', photo: undefined, photo_url: null, colours: [], use_wsp: true, use_mrp: useMrp, sizes: {}, custom, in_stock: true };
 }
 
 // ---------------- Product form ----------------
-function ProductForm({ initial, categories, sizeGroups, onCancel, onSave }) {
+function ProductForm({ initial, categories, sizeGroups, albumSets, onCancel, onSave }) {
   // the brand's size lists, plus any older size already on this product
   const groups = (() => {
     const known = new Set(sizeGroups.flatMap((g) => g.sizes));
@@ -74,6 +78,16 @@ function ProductForm({ initial, categories, sizeGroups, onCancel, onSave }) {
   }
 
   const bad = (v) => v === '' || v == null || isNaN(Number(v));
+
+  // new product: picking a category fills Custom with that category's default sets (or the album's)
+  function changeCategory(category_id) {
+    if (p.id) return setP({ ...p, category_id });
+    const cat = categories.find((c) => c.id === category_id);
+    const defs = cat && Array.isArray(cat.default_sets) && cat.default_sets.length ? cat.default_sets : (albumSets || []);
+    const str = (v) => (v == null ? '' : String(v));
+    const custom = defs.map((x) => ({ size: x.size, wsp: str(x.wsp), mrp: str(x.mrp) }));
+    setP({ ...p, category_id, custom, use_mrp: p.use_mrp || custom.some((x) => x.mrp !== '') });
+  }
 
   // Custom sets typed for this product: Set 1, Set 2 ...
   const custom = p.custom || [];
@@ -144,7 +158,7 @@ function ProductForm({ initial, categories, sizeGroups, onCancel, onSave }) {
         </label>
 
         <label className="field">Category
-          <select value={p.category_id || ''} onChange={(e) => setP({ ...p, category_id: e.target.value })}>
+          <select value={p.category_id || ''} onChange={(e) => changeCategory(e.target.value)}>
             <option value="">— No category —</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
@@ -242,8 +256,9 @@ function ProductForm({ initial, categories, sizeGroups, onCancel, onSave }) {
 }
 
 // ---------------- Categories tab ----------------
-function CategoriesTab({ categories, products, call }) {
+function CategoriesTab({ slug, categories, products, call, onSetsSaved }) {
   const [name, setName] = useState('');
+  const [setsId, setSetsId] = useState(null);
   const [editId, setEditId] = useState(null);
   const [editName, setEditName] = useState('');
 
@@ -273,7 +288,7 @@ function CategoriesTab({ categories, products, call }) {
       </form>
       {categories.length === 0 && <p className="muted">No categories yet.</p>}
       {categories.map((c) => (
-        <div className="list-item" key={c.id}>
+        <div className="list-item wrap" key={c.id}>
           {editId === c.id ? (
             <>
               <input type="text" className="grow" value={editName} onChange={(e) => setEditName(e.target.value)} style={{ marginTop: 0 }} autoFocus />
@@ -284,11 +299,18 @@ function CategoriesTab({ categories, products, call }) {
             <>
               <div className="grow">
                 <div style={{ fontWeight: 700 }}>{c.name}</div>
-                <div className="muted">{products.filter((p) => p.category_id === c.id).length} product(s)</div>
+                <div className="muted">
+                  {products.filter((p) => p.category_id === c.id).length} product(s)
+                  {Array.isArray(c.default_sets) && c.default_sets.length > 0 ? ` · ${c.default_sets.length} default set(s)` : ''}
+                </div>
               </div>
+              <button className="btn small mint" onClick={() => setSetsId(setsId === c.id ? null : c.id)}>Default sets</button>
               <button className="btn small blue" onClick={() => { setEditId(c.id); setEditName(c.name); }}>Rename</button>
               <button className="btn small blush" onClick={() => remove(c)}>Delete</button>
             </>
+          )}
+          {setsId === c.id && (
+            <CategorySets slug={slug} category={c} products={products} onSaved={onSetsSaved} onClose={() => setSetsId(null)} />
           )}
         </div>
       ))}
@@ -486,17 +508,19 @@ export default function ManagePage() {
       {error && <div className="error">{error}</div>}
 
       {tab === 'products' || !isAdmin ? (
-        <ProductsTab categories={categories} products={products} call={call} onEdit={openEdit} onAdd={() => setEditing(blankProduct())} />
+        <ProductsTab categories={categories} products={products} call={call} onEdit={openEdit} onAdd={() => setEditing(blankProduct(brandCustomSets(biz)))} />
       ) : tab === 'categories' ? (
-        <CategoriesTab categories={categories} products={products} call={call} />
+        <CategoriesTab slug={slug} categories={categories} products={products} call={call}
+          onSetsSaved={(d) => { setCategories(d.categories); setProducts(d.products); }} />
       ) : tab === 'sizes' ? (
-        <SizeLists slug={slug} groups={brandSizeGroups(biz)} onSaved={(size_groups) => setBiz({ ...biz, size_groups })} />
+        <SizeLists slug={slug} groups={brandSizeGroups(biz)} customSets={brandCustomSets(biz)} products={products}
+          onSaved={(size_groups, prods) => { setBiz({ ...biz, size_groups }); if (prods) setProducts(prods); }} />
       ) : (
         <GstSlabs slug={slug} slabs={biz.gst_slabs} onSaved={(gst_slabs) => setBiz({ ...biz, gst_slabs })} />
       )}
 
       {editing && (
-        <ProductForm initial={editing} categories={categories} sizeGroups={brandSizeGroups(biz)} onCancel={() => setEditing(null)} onSave={saveProduct} />
+        <ProductForm initial={editing} categories={categories} sizeGroups={brandSizeGroups(biz)} albumSets={brandCustomSets(biz)} onCancel={() => setEditing(null)} onSave={saveProduct} />
       )}
 
       <div className="footer">Powered by TechIngen Solutions</div>
